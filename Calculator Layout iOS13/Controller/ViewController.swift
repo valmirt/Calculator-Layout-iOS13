@@ -14,7 +14,11 @@ class ViewController: UIViewController {
     var operationChange = false
     var hasOneEqual = true
     var hasOneOperation = true
-
+    
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        return .lightContent
+    }
+    
     @IBAction func zeroButton(_ sender: UIButton) {
         display(element: "0")
     }
