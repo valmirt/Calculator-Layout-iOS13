@@ -20,4 +20,8 @@ extension String {
         
         return text
     }
+    
+    func isFalseDouble () -> Bool {
+        return self.contains(".0") && self.last == "0"
+    }
 }
