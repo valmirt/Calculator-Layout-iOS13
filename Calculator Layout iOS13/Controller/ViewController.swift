@@ -19,51 +19,11 @@ class ViewController: UIViewController {
         return .lightContent
     }
     
-    @IBAction func zeroButton(_ sender: UIButton) {
-        display(element: "0")
-    }
-    
-    @IBAction func oneButton(_ sender: UIButton) {
-        display(element: "1")
-    }
-    
-    @IBAction func twoButton(_ sender: UIButton) {
-        display(element: "2")
-    }
-    
-    @IBAction func threeButton(_ sender: UIButton) {
-        display(element: "3")
-    }
-    
-    @IBAction func fourButton(_ sender: UIButton) {
-        display(element: "4")
-    }
-    
-    @IBAction func fiveButton(_ sender: UIButton) {
-        display(element: "5")
-    }
-    
-    @IBAction func sixButton(_ sender: UIButton) {
-        display(element: "6")
-    }
-    
-    @IBAction func sevenButton(_ sender: UIButton) {
-        display(element: "7")
-    }
-    
-    @IBAction func eightButton(_ sender: UIButton) {
-        display(element: "8")
-    }
-    
-    @IBAction func nineButton(_ sender: UIButton) {
-        display(element: "9")
-        
-    }
-    
-    @IBAction func pointButton(_ sender: UIButton) {
-        if !isDouble() {
-            display(element: ".")
+    @IBAction func digitButton(_ sender: UIButton) {
+        if let digit = sender.currentTitle {
+            display(element: digit)
         }
+        changeAlphaButton(sender)
     }
     
     @IBAction func equalButton(_ sender: UIButton) {
@@ -71,18 +31,21 @@ class ViewController: UIViewController {
             hasOneEqual = false
             trySetOperatorTwo(true)
         }
+        changeColorButton(sender)
     }
     
-    @IBAction func plusButton(_ sender: UIButton) {
-        doIt(operation: "+")
-    }
-    
-    @IBAction func minusButton(_ sender: UIButton) {
-        doIt(operation: "-")
-    }
-    
-    @IBAction func multButton(_ sender: UIButton) {
-       doIt(operation: "*")
+    @IBAction func operationButton(_ sender: UIButton) {
+        if let op = sender.currentTitle {
+            switch op {
+            case "×":
+                doIt(operation: "*")
+            case "÷":
+                doIt(operation: "/")
+            default:
+                doIt(operation: op)
+            }
+            changeColorButton(sender)
+        }
     }
     
     @IBAction func percentageButton(_ sender: UIButton) {
@@ -98,10 +61,13 @@ class ViewController: UIViewController {
             } else {
                 trySetOperatorOne()
             }
-            displayResult(false)
-            hasOneEqual = false
-            operationChange = true
+            if !calculator.operatorOne.isEmpty {
+                displayResult(false)
+                hasOneEqual = false
+                operationChange = true
+            }
         }
+        changeAlphaButton(sender)
     }
     
     @IBAction func signalButton(_ sender: UIButton) {
@@ -110,61 +76,86 @@ class ViewController: UIViewController {
         if !hasOneOp {
             hasOneOperation = false
         }
+        changeAlphaButton(sender)
     }
     
     @IBAction func clearButton(_ sender: UIButton) {
         hasOneEqual = true
         calculator.clear()
         clearDisplay()
+        changeAlphaButton(sender)
     }
     
-    @IBAction func divideButton(_ sender: UIButton) {
-        doIt(operation: "/")
+    private func changeColorButton(_ sender: UIButton) {
+        let colorOne = sender.currentTitleColor
+        let colorTwo = sender.backgroundColor
+        sender.setTitleColor(colorTwo, for: .normal)
+        sender.backgroundColor = colorOne
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.15, execute: {
+            sender.setTitleColor(colorOne, for: .normal)
+            sender.backgroundColor = colorTwo
+        })
     }
     
+    private func changeAlphaButton(_ sender: UIButton) {
+        sender.alpha = 0.6
+        DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.15, execute: {
+            sender.alpha = 1
+        })
+    }
     
-    func display(element: String, _ signal: Bool = false) {
+    private func display(element: String, _ signal: Bool = false) {
         var text = displayLabel?.text
         hasOneOperation = true
         
         if text != nil {
             if signal && !text!.isEmpty {
-                if text!.contains("-") {
-                    text!.removeFirst()
-                } else {
-                    text! = "-\(text!)"
-                }
+                text = setSignal(text!)
             } else {
                 if !operationChange {
-                    if text!.onlyDigits().count < 9 {
-                        if text!.isEmpty && element == "." {
-                            text = "0."
-                        } else {
-                            text! += element
-                        }
-                    }
+                    text = regularInput(text!, element)
                 } else {
-                    operationChange = false
-                    if element == "." {
-                        text = "0."
-                    } else {
-                        text = element
-                    }
+                    text = firstInput(element)
                 }
             }
         } else {
-            operationChange = false
-            if element == "." {
-                text = "0."
-            } else {
-                text = element
-            }
+            text = firstInput(element)
         }
         
         displayLabel?.text = text
     }
     
-    func isDouble() -> Bool {
+    private func regularInput(_ field: String, _ element: String) -> String {
+        if field.onlyDigits().count < 9 {
+            if field.isEmpty && element == "." {
+                return "0."
+            } else {
+                return field + element
+            }
+        }
+        return field
+    }
+    
+    private func firstInput(_ element: String) -> String {
+        operationChange = false
+        if element == "." {
+            return "0."
+        } else {
+            return element
+        }
+    }
+    
+    private func setSignal(_ field: String) -> String {
+        if field.contains("-") {
+            var positive = field
+            positive.removeFirst()
+            return positive
+        } else {
+            return "-\(field)"
+        }
+    }
+    
+    private func isDouble() -> Bool {
         if let display = displayLabel {
             if let text = display.text {
                 return text.contains(".")
@@ -174,20 +165,13 @@ class ViewController: UIViewController {
         return false
     }
     
-    func clearDisplay() {
+    private func clearDisplay() {
         displayLabel?.text = ""
     }
     
-    func displayResult(_ equal: Bool) {
+    private func displayResult(_ equal: Bool) {
         var response = calculator.result()
-        
-        if response.count > 10 {
-            response = String(response.prefix(10))
-        }
-        if response.isFalseDouble() {
-            response.removeLast()
-            response.removeLast()
-        }
+        response = adjust(response)
         
         if response == "Error" || calculator.operation == "%" {
             hasOneOperation = false
@@ -203,15 +187,30 @@ class ViewController: UIViewController {
         operationChange = true
     }
     
-    func trySetOperatorOne() {
+    private func adjust(_ response: String) -> String {
+        if response.count > 10 {
+            return String(response.prefix(10))
+        }
+        if response.isFalseDouble() {
+            var resp = response
+            resp.removeLast()
+            resp.removeLast()
+            return resp
+        }
+        return response
+    }
+    
+    private func trySetOperatorOne() {
         if let display = displayLabel {
             if let text = display.text {
-                calculator.operatorOne = text
+                if !text.isEmpty {
+                    calculator.operatorOne = text
+                }
             }
         }
     }
     
-    func trySetOperatorTwo(_ equal: Bool) {
+    private func trySetOperatorTwo(_ equal: Bool) {
         if let display = displayLabel {
             if let text = display.text {
                 calculator.operatorTwo = text
@@ -220,7 +219,7 @@ class ViewController: UIViewController {
         }
     }
     
-    func doIt (operation: String) {
+    private func doIt (operation: String) {
         if hasOneOperation {
             hasOneOperation = false
             if !calculator.operatorOne.isEmpty {
@@ -235,4 +234,3 @@ class ViewController: UIViewController {
         }
     }
 }
-
